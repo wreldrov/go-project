@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Home Page</title>
+</head>
+<body>
+  <h1>Home Page</h1>
+  {{ if gt .Money 0 }}
+    <p>User name: {{ .Name }}</p>
+    <p>User age: {{ .Age }}</p>
+    <p>User money: {{ .Money }}</p>
+    <ul>
+      {{ range .Hobbies }}
+        <li><b>{{ . }}</b></li>
+      {{ else }}
+        <p>Empty list</p>
+      {{ end }}
+    </ul>
+  {{ end }}
+</body>
+</html>
