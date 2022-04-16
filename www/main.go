@@ -4,6 +4,9 @@ import (
   "fmt"
   "net/http"
   "html/template"
+
+  "github.com/gorilla/mux"
+
   "database/sql"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -14,12 +17,17 @@ type Article struct {
 }
 
 var posts = []Article{}
+var showPost = Article{}
 
 func handleFunc() {
+  r := mux.NewRouter()
+  r.HandleFunc("/", index).Methods("GET")
+  r.HandleFunc("/create", create).Methods("GET")
+  r.HandleFunc("/save_article", save_article).Methods("POST")
+  r.HandleFunc("/post/{id:[0-9]+}", show_post).Methods("GET")
+
+  http.Handle("/", r)
   http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
-  http.HandleFunc("/", index)
-  http.HandleFunc("/create", create)
-  http.HandleFunc("/save_article", save_article)
   http.ListenAndServe(":8080", nil)
 }
 
@@ -90,12 +98,50 @@ func readArticles() {
 
   posts = []Article{}
   for res.Next() {
-    var article Article
-    err = res.Scan(&article.Id, &article.Title, &article.Anons, &article.FullText)
+    var post Article
+    err = res.Scan(&post.Id, &post.Title, &post.Anons, &post.FullText)
     if err != nil {
       panic(err)
     }
 
-    posts = append(posts, article)
+    posts = append(posts, post)
   }
+}
+
+func readArticle(id string) {
+  db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:8889)/go-project")
+  if err != nil {
+    panic(err)
+  }
+
+  defer db.Close()
+
+  res, err := db.Query(fmt.Sprintf("SELECT * FROM `articles` WHERE id = '%s'", id))
+  if (err != nil) {
+    panic(err)
+  }
+
+  showPost = Article{}
+  for res.Next() {
+    var post Article
+    err = res.Scan(&post.Id, &post.Title, &post.Anons, &post.FullText)
+    if err != nil {
+      panic(err)
+    }
+
+    showPost = post
+  }
+}
+
+func show_post(w http.ResponseWriter, r *http.Request) {
+  t, err := template.ParseFiles("templates/show.html", "templates/header.html", "templates/footer.html")
+
+  if (err != nil) {
+    fmt.Fprintf(w, err.Error())
+  }
+
+  vars := mux.Vars(r)
+  readArticle(vars["id"])
+
+  t.ExecuteTemplate(w, "show", showPost)
 }
